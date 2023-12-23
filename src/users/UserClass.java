@@ -12,10 +12,20 @@ package users;
  */
 
 
-import dataStructures.DoublyLinkedList;
+import dataStructures.AVLTree;
+import dataStructures.BinarySearchTree;
+import dataStructures.ChainedHashTable;
+import dataStructures.Dictionary;
+
+/**
+ * Classe que implementa a interface User e UserData, contendo, por isso, todos os metodos
+ * e variaveis associados as acoes que um utilizador pode ter, ou seja, implementa todos os
+ * metodos(modificadores a acessores) de um utilizador na aplicacao.
+ */
+
+
 import dataStructures.List;
-import dataStructures.OrderedSequence;
-import dataStructures.OrderedSequenceClass;
+import dataStructures.SinglyLinkedList;
 import dataStructures.Iterator;
 
 import groups.*;
@@ -35,55 +45,51 @@ public class UserClass implements User, UserData {
 	 */
 	private static final int MAX_GROUPS = 10;
 
-	
+
 	/*
 	 * Idade deste utilizador.
 	 */
 	private int age;
 
 	/*
-	 * Indice da proxima posicao livre da colecao de grupos deste utilizador
-	 */
-	private int groupIndex;
-	
-	/*
 	 * Colecao dos grupos onde este utilizador participa.
-	 * A estrutura de dados escolhida para esta colecao foi o vetor, dado que, o numero de grupos
-	 * em que o utilizador participa e limitado (10 grupos), nao necessitando, assim de uma estrutura
-	 * de dados dinamica(lista ligada) nem de redimensionar o vetor, o que permite, a adicao de um 
-	 * novo grupo com complexidade temporal O(1). Assim o vetor tem 2 vantagens e a lista duplamente
-	 * ligada apenas 1 que e a remocao de um grupo.
+	 * A estrutura de dados escolhida foi a tabela de dispersao aberta pois permite a insercao, a remocao
+	 * e a pesquisa e o acesso a elementos com uma complexidade temporal perto de O(1) quando o fator de 
+	 * ocupacao da tabela e menor que 1. 
 	 */
-	private GroupData[] groups;
-	
+	private Dictionary<String,GroupData> groups;
+
 	/*
 	 * Colecao de mensagens deste utilizador.
-	 * A estrutura de dados escolhida foi a lista duplamente ligada, pois, o numero de mensagens que 
+	 * A estrutura de dados escolhida foi a lista simplesmente ligada, pois, o numero de mensagens que 
 	 * um utilizador pode ter e ilimitado, logo escolha de uma estrutura dinamica e nao de uma 
 	 * estrutura estatica como o vetor, onde o "custo" temporal de uma operacao de resize iria cobrir
-	 * todas as desvantagens que a lista poderia ter em relacao ao vetor.
+	 * todas as desvantagens que a lista poderia ter em relacao ao vetor. Como no caso desta aplicacao
+	 * as mensagens de um Group apenas sao iteradas por ordem de insercao, ou seja, nao existem pesquisas, foi 
+	 * escolhida lista simplesmente ligada que preserva a ordem de insercao dos elementos. A lista simplesmente
+	 * ligada foi escolhida em vez da lista duplamente ligada pois a adicao de uma mensagem e sempre no inicio da
+	 * lista nao se utilizando as vantegens da lista duplamente ligada, gastando assim, menos memoria 
 	 */
 	private List<MessageData> messages;
-	
+
 	/*
 	 * Colecao de contactos deste utilizador.
-	 * A estrutura de dados escolhida foi a sequencia ordenada, dado que, permite nao estar a fazer uma operacao de
-	 * sort cada vez que e feito um pedido de listagem dos contactos deste utilizador, uma vez que, a complexidade 
-	 * temporal de uma operacao de sort e alta e se existirem muitos pedidos de listagem entao uma colecao nao ordenada
-	 * torna se desvantajosa. 
+	 * A estrutura de dados escolhida foi a arvore AVL pois permite a insercao, a remocao
+	 * e a pesquisa e o acesso a elementos com uma complexidade temporal O(log n) (onde n e o numero de
+	 * elementos da arvore) e preserva a relacao de ordem das chaves permitindo itera-las ordenadamente.
 	 */
-	private OrderedSequence<UserData> contacts;	
+	private Dictionary<String, UserData> contacts;	
 
 	/*
 	 * Localidade deste utilizador.
 	 */
 	private String address;
-	
+
 	/*
 	 * Login deste utilizador.
 	 */
 	private String login;
-	
+
 	/*
 	 * Nome deste utilizador.
 	 */
@@ -111,29 +117,31 @@ public class UserClass implements User, UserData {
 		this.address = address;
 		this.profession = profession;
 
-		contacts = new OrderedSequenceClass<UserData>();
-		messages = new DoublyLinkedList<MessageData>();
-		groups = new GroupClass[MAX_GROUPS];
-		groupIndex = 0;
+		messages = new SinglyLinkedList<MessageData>();
+		contacts = new AVLTree<String, UserData>();
+		groups = new ChainedHashTable<String, GroupData>(MAX_GROUPS);
 	}
 
 
 	@Override
 	public void addContact(UserData contact) throws ContactExists {
-		if(contacts.contains(contact)) {
+		UserData usr = contacts.find(contact.login());
+
+		if(usr != null) {
 			throw new ContactExists();
 		}
-		
-		contacts.insert(contact);
+
+		contacts.insert(contact.login(), contact);
 	}
 
 	@Override
 	public void addGroup(GroupData group) throws SubscriptionExists {
-		if(findGroup(group) != -1) {
+		String name = group.name();
+		if(groups.find(name)!=null) {
 			throw new SubscriptionExists();
 		}
-		
-		groups[groupIndex++] = group;
+
+		groups.insert(name, group);
 	}
 
 	@Override
@@ -142,9 +150,23 @@ public class UserClass implements User, UserData {
 	}
 
 	@Override
-	public void addMessageToGroups(MessageData message) {
-		for(int i = 0; i < groupIndex; i++) {
-			((Group) groups[i]).addMessage(message);
+	public void addMessageToGroups(MessageData message) {	
+		Iterator<GroupData> it = ((ChainedHashTable<String, GroupData>)groups).values();
+		while(it.hasNext()) {
+			GroupData group = it.next();
+			((Group)group).addMessage(message);
+		}
+
+	}
+
+	@Override
+	public void sendMessageToAllContacts(MessageData message) {
+		if(hasContacts()) {
+			Iterator<UserData> it = ((BinarySearchTree<String, UserData>) contacts).values();
+			while(it.hasNext()) {
+				UserData usr = it.next();
+				((User)usr).addMessage(message);
+			}
 		}
 	}
 
@@ -168,8 +190,8 @@ public class UserClass implements User, UserData {
 		if(contacts.isEmpty()) {
 			throw new NoContacts();
 		}
-		
-		return contacts.iterator();
+
+		return ((BinarySearchTree<String, UserData>) contacts).values();
 	}
 
 	@Override
@@ -193,7 +215,7 @@ public class UserClass implements User, UserData {
 
 	@Override
 	public int getNumberOfGroups() {
-		return groupIndex;
+		return groups.size();
 	}
 
 	@Override
@@ -207,14 +229,16 @@ public class UserClass implements User, UserData {
 	}
 
 	@Override
-	public Iterator<MessageData> messages(UserData contact) throws ContactNotExists, NoContactMessages{
-		if(!contacts.contains(contact) && !(login.equals(contact.login()))) {
+	public Iterator<MessageData> messages(UserData contact) throws ContactNotExists, NoContactMessages {
+		UserData usr = contacts.find(contact.login());
+
+		if((usr == null) && !(login.equals(contact.login()))) {
 			throw new ContactNotExists();
 		}
 		if(messages.isEmpty()) {
 			throw new NoContactMessages();
 		}
-		
+
 		return messages.iterator();
 	}
 
@@ -230,39 +254,19 @@ public class UserClass implements User, UserData {
 
 	@Override
 	public void removeContact(UserData contact) throws ContactNotExists {
-		boolean removed = contacts.remove(contact);
-		
-		if(!removed) {
+		UserData removed = contacts.remove(contact.login());
+
+		if(removed == null) {
 			throw new ContactNotExists();
 		}
 	}
 
 	@Override
 	public void removeGroup(GroupData group) throws GroupNotExists {
-		int index = findGroup(group);
-		
-		if(index == -1) {
-			throw new GroupNotExists();
-		}
-		
-		for(int i = index; i < groupIndex-1; i++) {
-			groups[i] = groups[i+1];
-		}
-		groupIndex--;
-	}
+		GroupData removed = groups.remove(group.name());
 
-	/**
-	 * Devolve a posicao da primeira ocurrencia de group na colecao de grupos(GroupData)
-	 * deste utilizador, se a colecao contiver group, senao devolve -1. 
-	 * @param group - group a ser procurado na colecao de grupos.
-	 * @return - posicao da primeira ocurrencia de group na colecao ou -1.
-	 */
-	private int findGroup(GroupData group) {
-		for(int i = 0 ; i < groupIndex; i++) {
-			if(groups[i].name().equals(group.name()))
-				return i;
-		}
-		return -1;
+		if(removed == null) 
+			throw new GroupNotExists();
 	}
 
 }

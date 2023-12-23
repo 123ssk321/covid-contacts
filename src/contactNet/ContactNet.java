@@ -4,12 +4,10 @@
 
 package contactNet;
 
-
 /**
  * Interface de topo que representa a aplicacao gerindo todas as 
  * acoes associadas a esta.
  */
-
 
 import dataStructures.Iterator;
 import groups.GroupData;

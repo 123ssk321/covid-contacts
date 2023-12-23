@@ -100,7 +100,6 @@ public class Main {
 		String cmd;
 		ContactNet net = new ContactNetClass();
 		boolean exit = false;
-		
 		do {
 			System.out.print(PROMPT);
 			cmd = in.next();

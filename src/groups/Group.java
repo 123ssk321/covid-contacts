@@ -41,5 +41,10 @@ public interface Group {
 	 * uma subscricao neste grupo.
 	 */
 	void removeParticipant(UserData participant) throws SubscriptionNotExists;
+	
+	/**
+	 * Remove todos os participante da colecao de participantes deste grupo.
+	 */
+	void removeAllParticipants();
 
 }

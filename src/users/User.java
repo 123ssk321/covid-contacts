@@ -46,6 +46,7 @@ public interface User {
 	 */
 	void addMessage(MessageData message);
 	
+	
 	/**
 	 * Adiciona uma mensagem(objeto do tipo MessageData) a todos os grupos onde este utilizador
 	 * e participante.
@@ -53,6 +54,13 @@ public interface User {
 	 * @param message - mensagem a ser adicionada a todos os grupos subscritos.
 	 */
 	void addMessageToGroups(MessageData message);
+	
+	/**
+	 * Envia uma mensagem(objeto do tipo MessageData) a todos os contactos deste utilizador.
+	 * Pre: message != null
+	 * @param message - mensagem a ser adicionada a todos os grupos subscritos.
+	 */
+	void sendMessageToAllContacts(MessageData message);
 	
 	/**
 	 * Remove um contacto da colecao de contactos deste utilizador.
